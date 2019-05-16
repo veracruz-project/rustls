@@ -136,13 +136,15 @@ impl ServerCertVerifier for SelfSignedVerifier {
                           _roots: &RootCertStore,
                           presented_certs: &[Certificate],
                           _pinned_certs: &[Certificate],
-                          _dns_name: webpki::DNSNameRef,
+                          dns_name: webpki::DNSNameRef,
                           _ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
-        println!("Calling prepare_self_signed\n");
-        let _cert = prepare_self_signed(presented_certs)?;
-        println!("prepare_self_signed has returned\n");
-        // for now, pretend it's verified
-        Ok(ServerCertVerified::assertion())
+        let cert = prepare_self_signed(presented_certs)?;
+
+        // Verify the certificate is valid for the host. Since the certificate is self-signed,
+        // this is provides no addition security, but it's helpful to prevent mistakes
+        cert.verify_is_valid_for_dns_name(dns_name)
+            .map_err(TLSError::WebPKIError)
+            .map(|_| ServerCertVerified::assertion())
     }
 }
 
