@@ -113,6 +113,18 @@ impl ServerCertVerifier for WebPKIVerifier {
             debug!("Unvalidated OCSP response: {:?}", ocsp_response.to_vec());
         }
 
+        if pinned_certs.len() > 0 {
+            let mut found = false;
+            for this_pinned_cert in pinned_certs.iter() {
+                if this_pinned_cert == &presented_certs[0] {
+                    found = true;
+                }
+            };
+            if !found {
+                return Err(TLSError::WebPKIError(webpki::Error::CertNotValidForName));
+            }
+        }
+
         cert.verify_is_valid_for_dns_name(dns_name)
             .map_err(TLSError::WebPKIError)
             .map(|_| ServerCertVerified::assertion())
@@ -135,10 +147,22 @@ impl ServerCertVerifier for SelfSignedVerifier {
     fn verify_server_cert(&self,
                           _roots: &RootCertStore,
                           presented_certs: &[Certificate],
-                          _pinned_certs: &[Certificate],
+                          pinned_certs: &[Certificate],
                           dns_name: webpki::DNSNameRef,
                           _ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
         let cert = prepare_self_signed(presented_certs)?;
+
+        if pinned_certs.len() > 0 {
+            let mut found = false;
+            for this_pinned_cert in pinned_certs.iter() {
+                if this_pinned_cert == &presented_certs[0] {
+                    found = true;
+                }
+            };
+            if !found {
+                return Err(TLSError::WebPKIError(webpki::Error::CertNotValidForName));
+            }
+        }
 
         // Verify the certificate is valid for the host. Since the certificate is self-signed,
         // this is provides no addition security, but it's helpful to prevent mistakes
