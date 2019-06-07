@@ -1,4 +1,5 @@
 // Additional x509/asn1 functions to those provided in webpki/ring.
+use std::prelude::v1::*;
 
 use ring::io::der;
 

@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+
+use std::prelude::v1::*;
 use std::fmt;
 use std::error::Error;
 use crate::msgs::enums::{ContentType, HandshakeType, AlertDescription};

@@ -1,9 +1,11 @@
 
+use std::prelude::v1::*;
+use std::untrusted::time::SystemTimeEx;
 use crate::server::ProducesTickets;
 use crate::rand;
 
 use std::mem;
-use std::sync::{Mutex, Arc};
+use std::sync::{SgxMutex, Arc};
 use std::time;
 use ring::aead;
 
@@ -117,7 +119,7 @@ struct TicketSwitcherState {
 pub struct TicketSwitcher {
     generator: fn() -> Box<dyn ProducesTickets>,
     lifetime: u32,
-    state: Mutex<TicketSwitcherState>,
+    state: SgxMutex<TicketSwitcherState>,
 }
 
 impl TicketSwitcher {
@@ -131,7 +133,7 @@ impl TicketSwitcher {
         TicketSwitcher {
             generator,
             lifetime,
-            state: Mutex::new(TicketSwitcherState {
+            state: SgxMutex::new(TicketSwitcherState {
                 current: generator(),
                 previous: None,
                 next_switch_time: timebase() + u64::from(lifetime),

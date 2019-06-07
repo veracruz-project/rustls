@@ -1,10 +1,11 @@
+use std::prelude::v1::*;
 use crate::msgs::enums::SignatureScheme;
 use crate::sign;
 use crate::key;
 use crate::client;
 
 use std::collections;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, SgxMutex};
 
 /// An implementor of `StoresClientSessions` which does nothing.
 pub struct NoClientSessionStorage {}
@@ -23,7 +24,7 @@ impl client::StoresClientSessions for NoClientSessionStorage {
 /// in memory.  It enforces a limit on the number of entries
 /// to bound memory usage.
 pub struct ClientSessionMemoryCache {
-    cache: Mutex<collections::HashMap<Vec<u8>, Vec<u8>>>,
+    cache: SgxMutex<collections::HashMap<Vec<u8>, Vec<u8>>>,
     max_entries: usize,
 }
 
@@ -33,7 +34,7 @@ impl ClientSessionMemoryCache {
     pub fn new(size: usize) -> Arc<ClientSessionMemoryCache> {
         debug_assert!(size > 0);
         Arc::new(ClientSessionMemoryCache {
-            cache: Mutex::new(collections::HashMap::new()),
+            cache: SgxMutex::new(collections::HashMap::new()),
             max_entries: size,
         })
     }

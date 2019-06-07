@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::session::SessionRandoms;
 use crate::msgs::handshake::{ServerExtension, SessionID};
 use crate::suites;

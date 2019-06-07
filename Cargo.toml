@@ -9,26 +9,29 @@ description = "Rustls is a modern TLS library written in Rust."
 homepage = "https://github.com/ctz/rustls"
 repository = "https://github.com/ctz/rustls"
 categories = ["network-programming", "cryptography"]
+exclude = ["/sgx/*"]
 
 [dependencies]
-base64 = "0.10"
-log = { version = "0.4.4", optional = true }
-ring = "0.16.5"
-sct = "0.6.0"
-webpki = "0.21.0"
+base64 = { git = "https://github.com/mesalock-linux/rust-base64-sgx" }
+log = { git = "https://github.com/mesalock-linux/log-sgx", optional = true }
+ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
+sct = { git = "https://github.com/mesalock-linux/sct.rs", branch = "mesalock_sgx" }
+webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+sgx_tstd = { rev = "v1.0.8", git = "https://github.com/baidu/rust-sgx-sdk.git", optional = true }
 
 [features]
-default = ["logging"]
+default = ["logging", "mesalock_sgx"]
 logging = ["log"]
 dangerous_configuration = []
 quic = []
+mesalock_sgx = ["sgx_tstd"]
 
 [dev-dependencies]
-env_logger = "0.6.1"
-log = "0.4.4"
-tempfile = "3.0"
-webpki-roots = "0.17.0"
-criterion = "0.2.11"
+#env_logger = "0.6.1"
+#log = "0.4.4"
+#tempfile = "3.0"
+#webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", branch = "mesalock_sgx" }
+#criterion = "0.2.11"
 
 [[example]]
 name = "bogo_shim"

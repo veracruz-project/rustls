@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::session::{Session, SessionCommon};
 use crate::keylog::{KeyLog, NoKeyLog};
 use crate::suites::{SupportedCipherSuite, ALL_CIPHERSUITES};

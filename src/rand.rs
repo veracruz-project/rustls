@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 
 /// The single place where we generate random material
 /// for our own use.  These functions never fail,

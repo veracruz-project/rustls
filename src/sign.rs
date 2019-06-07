@@ -1,3 +1,4 @@
+use std::prelude::v1::*;
 use crate::msgs::enums::{SignatureAlgorithm, SignatureScheme};
 use crate::util;
 use crate::key;
