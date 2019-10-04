@@ -55,6 +55,12 @@ macro_rules! enum_builder {
                     ,$enum_name::Unknown(x) => x
                 }
             }
+            pub fn lookup_value(key: &str) -> Result<$enum_name, &str> {
+                match key {
+                    $( stringify!($enum_var) => Ok( $enum_name::$enum_var)),*
+                    ,_ => Err("Unknown enum value"),
+                }
+            }
         }
         impl Codec for $enum_name {
             fn encode(&self, bytes: &mut Vec<u8>) {
