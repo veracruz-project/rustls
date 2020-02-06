@@ -219,11 +219,8 @@ fn prepare_self_signed<'a, 'b>(presented_certs: &'a [Certificate])
     }
 
     // EE cert must appear first.
-    println!("prepare_self_signed: untrusted input parse\n");
     let cert_der = untrusted::Input::from(&presented_certs[0].0);
-    println!("prepare_self_signed: calling EndEntityCert::from\n");
     let cert = webpki::EndEntityCert::from(cert_der);
-    println!("prepare_self_signed: calling map_err\n");
     let cert = cert.map_err(TLSError::WebPKIError)?;
     Ok(cert)
 }
