@@ -1,11 +1,15 @@
 
 use std::prelude::v1::*;
+#[cfg(feature="mesalock_sgx")]
 use std::untrusted::time::SystemTimeEx;
 use crate::server::ProducesTickets;
 use crate::rand;
 
 use std::mem;
-use std::sync::{SgxMutex, Arc};
+#[cfg(not(feature="mesalock_sgx"))]
+use std::sync::{Mutex, Arc};
+#[cfg(feature="mesalock_sgx")]
+use std::sync::{SgxMutex as Mutex, Arc};
 use std::time;
 use ring::aead;
 
@@ -119,7 +123,7 @@ struct TicketSwitcherState {
 pub struct TicketSwitcher {
     generator: fn() -> Box<dyn ProducesTickets>,
     lifetime: u32,
-    state: SgxMutex<TicketSwitcherState>,
+    state: Mutex<TicketSwitcherState>,
 }
 
 impl TicketSwitcher {
@@ -133,7 +137,7 @@ impl TicketSwitcher {
         TicketSwitcher {
             generator,
             lifetime,
-            state: SgxMutex::new(TicketSwitcherState {
+            state: Mutex::new(TicketSwitcherState {
                 current: generator(),
                 previous: None,
                 next_switch_time: timebase() + u64::from(lifetime),

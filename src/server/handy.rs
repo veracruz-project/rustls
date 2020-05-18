@@ -7,7 +7,10 @@ use crate::server;
 use crate::error::TLSError;
 
 use std::collections;
-use std::sync::{Arc, SgxMutex};
+#[cfg(not(feature="mesalock_sgx"))]
+use std::sync::{Mutex, Arc};
+#[cfg(feature="mesalock_sgx")]
+use std::sync::{SgxMutex as Mutex, Arc};
 
 /// Something which never stores sessions.
 pub struct NoServerSessionStorage {}
@@ -28,7 +31,7 @@ impl server::StoresServerSessions for NoServerSessionStorage {
 /// in memory.  If enforces a limit on the number of stored sessions
 /// to bound memory usage.
 pub struct ServerSessionMemoryCache {
-    cache: SgxMutex<collections::HashMap<Vec<u8>, Vec<u8>>>,
+    cache: Mutex<collections::HashMap<Vec<u8>, Vec<u8>>>,
     max_entries: usize,
 }
 
@@ -38,7 +41,7 @@ impl ServerSessionMemoryCache {
     pub fn new(size: usize) -> Arc<ServerSessionMemoryCache> {
         debug_assert!(size > 0);
         Arc::new(ServerSessionMemoryCache {
-            cache: SgxMutex::new(collections::HashMap::new()),
+            cache: Mutex::new(collections::HashMap::new()),
             max_entries: size,
         })
     }

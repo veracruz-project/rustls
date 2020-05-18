@@ -1,10 +1,16 @@
 use std::prelude::v1::*;
 use std::env;
+#[cfg(not(feature="mesalock_sgx"))]
+use std::fs::{File, OpenOptions};
+#[cfg(feature="mesalock_sgx")]
 use std::untrusted::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io;
 use std::io::Write;
-use std::sync::SgxMutex;
+#[cfg(not(feature="mesalock_sgx"))]
+use std::sync::{Mutex, Arc};
+#[cfg(feature="mesalock_sgx")]
+use std::sync::{SgxMutex as Mutex, Arc};
 
 #[cfg(feature = "logging")]
 use crate::log::warn;
@@ -127,13 +133,13 @@ impl KeyLogFileInner {
 ///
 /// If such a file cannot be opened, or cannot be written then
 /// this does nothing but logs errors at warning-level.
-pub struct KeyLogFile(SgxMutex<KeyLogFileInner>);
+pub struct KeyLogFile(Mutex<KeyLogFileInner>);
 
 impl KeyLogFile {
     /// Makes a new `KeyLogFile`.  The environment variable is
     /// inspected and the named file is opened during this call.
     pub fn new() -> Self {
-        KeyLogFile(SgxMutex::new(KeyLogFileInner::new()))
+        KeyLogFile(Mutex::new(KeyLogFileInner::new()))
     }
 }
 

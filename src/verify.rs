@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+#[cfg(feature="mesalock_sgx")]
 use std::untrusted::time::SystemTimeEx;
 use webpki;
 use sct;

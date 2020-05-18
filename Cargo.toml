@@ -12,19 +12,19 @@ categories = ["network-programming", "cryptography"]
 exclude = ["/sgx/*"]
 
 [dependencies]
-base64 = { git = "https://github.com/mesalock-linux/rust-base64-sgx" }
-log = { git = "https://github.com/mesalock-linux/log-sgx", optional = true }
-ring = { git = "https://github.com/mesalock-linux/ring-sgx", tag = "v0.16.5" }
-sct = { git = "https://github.com/mesalock-linux/sct.rs", branch = "mesalock_sgx" }
-webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+base64 = { git = "https://github.com/veracruz-project/rust-base64.git", branch="veracruz" }
+log = { git = "https://github.com/veracruz-project/log.git", optional = true, branch="veracruz" }
+ring = { git = "https://github.com/veracruz-project/ring.git", branch = "rustls_back_end" }
+sct = { git = "https://github.com/veracruz-project/sct.rs.git", branch = "veracruz" }
+webpki = { git = "https://github.com/veracruz-project/webpki.git", branch = "veracruz" }
 sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 [features]
-default = ["logging", "mesalock_sgx"]
+default = ["logging", "ring/non_sgx"]
 logging = ["log"]
 dangerous_configuration = []
 quic = []
-mesalock_sgx = ["sgx_tstd"]
+mesalock_sgx = ["sgx_tstd", "base64/mesalock_sgx", "log/mesalock_sgx", "ring/mesalock_sgx","sct/mesalock_sgx", "webpki/mesalock_sgx"]
 
 [dev-dependencies]
 #env_logger = "0.6.1"
