@@ -138,7 +138,7 @@ pub struct ClientConfig {
     pub enable_early_data: bool,
 
     /// Collection of pinned certificates
-    pub pinned_certs: Vec<key::Certificate>,
+    pub pinned_cert_hashes: Vec<Vec<u8>>,
 }
 
 impl Default for ClientConfig {
@@ -167,7 +167,7 @@ impl ClientConfig {
             verifier: Arc::new(verify::WebPKIVerifier::new()),
             key_log: Arc::new(NoKeyLog {}),
             enable_early_data: false,
-            pinned_certs: Vec::new(),
+            pinned_cert_hashes: Vec::new(),
         }
     }
 
@@ -192,7 +192,7 @@ impl ClientConfig {
             verifier: Arc::new(verify::SelfSignedVerifier::new()),
             key_log: Arc::new(NoKeyLog {}),
             enable_early_data: false,
-            pinned_certs: Vec::new(),
+            pinned_cert_hashes: Vec::new(),
         }
     }
 

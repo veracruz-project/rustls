@@ -66,7 +66,7 @@ pub trait ServerCertVerifier : Send + Sync {
     fn verify_server_cert(&self,
                           roots: &RootCertStore,
                           presented_certs: &[Certificate],
-                          _pinned_certs: &[Certificate],
+                          _pinned_cert_hashes: &[Vec<u8>],
                           dns_name: webpki::DNSNameRef,
                           ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError>;
 }
@@ -99,7 +99,7 @@ impl ServerCertVerifier for WebPKIVerifier {
     fn verify_server_cert(&self,
                           roots: &RootCertStore,
                           presented_certs: &[Certificate],
-                          pinned_certs: &[Certificate],
+                          pinned_cert_hashes: &[Vec<u8>],
                           dns_name: webpki::DNSNameRef,
                           ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
         let (cert, chain, trustroots) = prepare(roots, presented_certs)?;
@@ -113,10 +113,13 @@ impl ServerCertVerifier for WebPKIVerifier {
             debug!("Unvalidated OCSP response: {:?}", ocsp_response.to_vec());
         }
 
-        if pinned_certs.len() > 0 {
+        let presented_cert = &presented_certs[0];
+
+        if pinned_cert_hashes.len() > 0 {
+            let presented_cert_hash = ring::digest::digest(&ring::digest::SHA256, presented_cert.as_ref());
             let mut found = false;
-            for this_pinned_cert in pinned_certs.iter() {
-                if this_pinned_cert == &presented_certs[0] {
+            for this_pinned_cert_hash in pinned_cert_hashes.iter() {
+                if *this_pinned_cert_hash == presented_cert_hash.as_ref() {
                     found = true;
                 }
             };
@@ -147,15 +150,19 @@ impl ServerCertVerifier for SelfSignedVerifier {
     fn verify_server_cert(&self,
                           _roots: &RootCertStore,
                           presented_certs: &[Certificate],
-                          pinned_certs: &[Certificate],
+                          pinned_cert_hashes: &[Vec<u8>],
                           dns_name: webpki::DNSNameRef,
                           _ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
         let cert = prepare_self_signed(presented_certs)?;
 
-        if pinned_certs.len() > 0 {
+        let presented_cert = &presented_certs[0];
+
+        if pinned_cert_hashes.len() > 0 {
+            let presented_cert_sliced = presented_cert.as_ref();
+            let presented_cert_hash = ring::digest::digest(&ring::digest::SHA256, presented_cert_sliced);
             let mut found = false;
-            for this_pinned_cert in pinned_certs.iter() {
-                if this_pinned_cert == &presented_certs[0] {
+            for this_pinned_cert_hash in pinned_cert_hashes.iter() {
+                if *this_pinned_cert_hash == presented_cert_hash.as_ref() {
                     found = true;
                 }
             };

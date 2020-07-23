@@ -469,7 +469,7 @@ impl hs::State for ExpectServerDone {
             .get_verifier()
             .verify_server_cert(&sess.config.root_store,
                                 &st.server_cert.cert_chain,
-                                &sess.config.pinned_certs,
+                                &sess.config.pinned_cert_hashes,
                                 st.handshake.dns_name.as_ref(),
                                 &st.server_cert.ocsp_response)
             .map_err(|err| hs::send_cert_error_alert(sess, err))?;
