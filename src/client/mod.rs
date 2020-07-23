@@ -136,6 +136,9 @@ pub struct ClientConfig {
     ///
     /// The default is false.
     pub enable_early_data: bool,
+
+    /// Collection of pinned certificates
+    pub pinned_certs: Vec<key::Certificate>,
 }
 
 impl Default for ClientConfig {
@@ -144,7 +147,8 @@ impl Default for ClientConfig {
 
 impl ClientConfig {
     /// Make a `ClientConfig` with a default set of ciphersuites,
-    /// no root certificates, no ALPN protocols, and no client auth.
+    /// no root certificates, no ALPN protocols, no client auth,
+    /// and uses CA certs for server authentication.
     ///
     /// The default session persistence provider stores up to 32
     /// items in memory.
@@ -163,6 +167,32 @@ impl ClientConfig {
             verifier: Arc::new(verify::WebPKIVerifier::new()),
             key_log: Arc::new(NoKeyLog {}),
             enable_early_data: false,
+            pinned_certs: Vec::new(),
+        }
+    }
+
+    /// Make a `ClientConfig` with a default set of ciphersuites,
+    /// no root certificates, no ALPN protocols, client auth,
+    /// and uses self-signed certificates for server authentication
+    ///
+    /// The default session persistence provider stores up to 32
+    /// items in memory.
+    pub fn new_self_signed() -> ClientConfig {
+        ClientConfig {
+            ciphersuites: ALL_CIPHERSUITES.to_vec(),
+            root_store: anchors::RootCertStore::empty(),
+            alpn_protocols: Vec::new(),
+            session_persistence: handy::ClientSessionMemoryCache::new(32),
+            mtu: None,
+            client_auth_cert_resolver: Arc::new(handy::FailResolveClientCert {}),
+            enable_tickets: true,
+            versions: vec![ProtocolVersion::TLSv1_3, ProtocolVersion::TLSv1_2],
+            ct_logs: None,
+            enable_sni: true,
+            verifier: Arc::new(verify::SelfSignedVerifier::new()),
+            key_log: Arc::new(NoKeyLog {}),
+            enable_early_data: false,
+            pinned_certs: Vec::new(),
         }
     }
 

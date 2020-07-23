@@ -66,6 +66,7 @@ pub trait ServerCertVerifier : Send + Sync {
     fn verify_server_cert(&self,
                           roots: &RootCertStore,
                           presented_certs: &[Certificate],
+                          _pinned_certs: &[Certificate],
                           dns_name: webpki::DNSNameRef,
                           ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError>;
 }
@@ -98,6 +99,7 @@ impl ServerCertVerifier for WebPKIVerifier {
     fn verify_server_cert(&self,
                           roots: &RootCertStore,
                           presented_certs: &[Certificate],
+                          pinned_certs: &[Certificate],
                           dns_name: webpki::DNSNameRef,
                           ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
         let (cert, chain, trustroots) = prepare(roots, presented_certs)?;
@@ -120,6 +122,33 @@ impl ServerCertVerifier for WebPKIVerifier {
 impl WebPKIVerifier {
     pub fn new() -> WebPKIVerifier {
         WebPKIVerifier {
+            time: try_now,
+        }
+    }
+}
+
+pub struct SelfSignedVerifier {
+    pub time: fn() -> Result<webpki::Time, TLSError>,
+}
+
+impl ServerCertVerifier for SelfSignedVerifier {
+    fn verify_server_cert(&self,
+                          _roots: &RootCertStore,
+                          presented_certs: &[Certificate],
+                          _pinned_certs: &[Certificate],
+                          _dns_name: webpki::DNSNameRef,
+                          _ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
+        println!("Calling prepare_self_signed\n");
+        let _cert = prepare_self_signed(presented_certs)?;
+        println!("prepare_self_signed has returned\n");
+        // for now, pretend it's verified
+        Ok(ServerCertVerified::assertion())
+    }
+}
+
+impl SelfSignedVerifier {
+    pub fn new() -> SelfSignedVerifier {
+        SelfSignedVerifier {
             time: try_now,
         }
     }
@@ -148,6 +177,22 @@ fn prepare<'a, 'b>(roots: &'b RootCertStore, presented_certs: &'a [Certificate])
         .collect();
 
     Ok((cert, chain, trustroots))
+}
+
+fn prepare_self_signed<'a, 'b>(presented_certs: &'a [Certificate])
+                               -> Result<webpki::EndEntityCert<'a>, TLSError> {
+    if presented_certs.is_empty() {
+        return Err(TLSError::NoCertificatesPresented);
+    }
+
+    // EE cert must appear first.
+    println!("prepare_self_signed: untrusted input parse\n");
+    let cert_der = untrusted::Input::from(&presented_certs[0].0);
+    println!("prepare_self_signed: calling EndEntityCert::from\n");
+    let cert = webpki::EndEntityCert::from(cert_der);
+    println!("prepare_self_signed: calling map_err\n");
+    let cert = cert.map_err(TLSError::WebPKIError)?;
+    Ok(cert)
 }
 
 fn try_now() -> Result<webpki::Time, TLSError> {

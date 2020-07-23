@@ -573,6 +573,7 @@ impl hs::State for ExpectCertificateVerify {
             .get_verifier()
             .verify_server_cert(&sess.config.root_store,
                                 &self.server_cert.cert_chain,
+                                &sess.config.pinned_certs,
                                 self.handshake.dns_name.as_ref(),
                                 &self.server_cert.ocsp_response)
             .map_err(|err| send_cert_error_alert(sess, err))?;
