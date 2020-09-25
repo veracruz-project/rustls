@@ -259,7 +259,10 @@ impl ClientCertVerifier for AllowAnyAuthenticatedClient {
     fn verify_client_cert(&self, presented_certs: &[Certificate])
                           -> Result<ClientCertVerified, TLSError> {
         let (cert, chain, trustroots) = prepare(&self.roots, presented_certs)?;
+        #[cfg(not(target_os="optee"))]
         let now = try_now()?;
+        #[cfg(target_os="optee")]
+        let now = webpki::Time::from_seconds_since_unix_epoch(0);
         cert.verify_is_valid_tls_client_cert(
                 SUPPORTED_SIG_ALGS, &webpki::TLSClientTrustAnchors(&trustroots),
                 &chain, now)
