@@ -202,15 +202,15 @@
 #![cfg_attr(all(target_env = "sgx", target_vendor = "mesalock"), allow(unstable_features))]
 #![cfg_attr(all(feature = "mesalock_sgx", not(target_env = "sgx"), not(target_arch="aarch64")), no_std)]
 #![cfg_attr(all(target_env = "sgx", target_vendor = "mesalock"), feature(rustc_private))]
+// Enable documentation for all features on docs.rs
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(all(feature = "mesalock_sgx", not(target_env = "sgx")))]
 #[macro_use]
 extern crate sgx_tstd as std;
 
-#[cfg(taret_os="optee")]
+#[cfg(target_os="optee")]
 extern crate optee_utee;
-// Enable documentation for all features on docs.rs
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 // log for logging (optional).
 #[cfg(feature = "logging")]
