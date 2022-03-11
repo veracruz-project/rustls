@@ -1,9 +1,11 @@
-![Logo](https://raw.githubusercontent.com/ctz/rustls/master/admin/rustls-logo-web.png)
+<p align="center">
+  <img width="460" height="300" src="https://raw.githubusercontent.com/ctz/rustls/master/admin/rustls-logo-web.png">
+</p>
 
-Rustls is a modern TLS library written in Rust.  It's pronounced 'rustles'.
-It uses [*ring*](https://github.com/briansmith/ring) for cryptography
-and [libwebpki](https://github.com/briansmith/webpki) for certificate
+<p align="center">
+Rustls is a modern TLS library written in Rust.  It's pronounced 'rustles'. It uses <a href = "https://github.com/briansmith/ring"><em>ring</em></a> for cryptography and <a href = "https://github.com/briansmith/webpki">libwebpki</a> for certificate
 verification.
+</p>
 
 # Status
 Rustls is ready for use.  There are no major breaking interface changes
@@ -13,12 +15,35 @@ If you'd like to help out, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [![Build Status](https://travis-ci.org/ctz/rustls.svg?branch=master)](https://travis-ci.org/ctz/rustls)
 [![Build Status](https://dev.azure.com/ctz99/ctz/_apis/build/status/ctz.rustls?branchName=master)](https://dev.azure.com/ctz99/ctz/_build/latest?definitionId=3&branchName=master)
-[![Coverage Status (coveralls)](https://coveralls.io/repos/github/ctz/rustls/badge.svg?branch=master)](https://coveralls.io/github/ctz/rustls?branch=master)
 [![Coverage Status (codecov.io)](https://codecov.io/gh/ctz/rustls/branch/master/graph/badge.svg)](https://codecov.io/gh/ctz/rustls/)
 [![Documentation](https://docs.rs/rustls/badge.svg)](https://docs.rs/rustls/)
 
 ## Release history:
 
+* Next release:
+  - Allow custom certificate validation implementations to also
+    handle handshake signature computation.  This allows uses in non-web
+    contexts, where `webpki` is not likely to process the certificates
+    in use.  Thanks to @DemiMarie-parity.
+  - Performance improvements.  Thanks to @nviennot.
+  - Fixed client authentication being unduly rejected by client when server
+    uses the superseded certificate_types field of CertificateRequest.
+  - *Breaking API change*: The writev_tls API has been removed, in favour
+    of using vectored IO support now offered by std::io::Write.
+* 0.17.0 (2020-02-22):
+  - *Breaking API change*: ALPN protocols offered by the client are passed
+    to the server certificate resolution trait (`ResolvesServerCert`).
+  - *Breaking API change*: The server certificate resolution trait now
+    takes a struct containing its arguments, so new data can be passed
+    to these functions without further breaking changes.
+  - Signature schemes offered by the client are now filtered to those
+    compatible with the client-offered ciphersuites.  Prior to this change
+    it was likely that server key type switching would not work for clients
+    that offer signature schemes mismatched with their ciphersuites.
+  - Add manual with goal-oriented documentation, and rationale for design
+    decisions.
+  - *Breaking API change*: `AlwaysResolvesClientCert::new` is now fallible,
+    as is `ClientConfig::set_single_client_cert`.
 * 0.16.0 (2019-08-10):
   - Optimisation of read path for polled non-blocking IO.
   - Correct an omission in TLS1.3 middlebox compatibility mode, causing
@@ -90,7 +115,7 @@ obsolete cryptography.
 * ECDSA or RSA server authentication by servers.
 * Forward secrecy using ECDHE; with curve25519, nistp256 or nistp384 curves.
 * AES128-GCM and AES256-GCM bulk encryption, with safe nonces.
-* Chacha20Poly1305 bulk encryption.
+* ChaCha20-Poly1305 bulk encryption ([RFC7905](https://tools.ietf.org/html/rfc7905)).
 * ALPN support.
 * SNI support.
 * Tunable MTU to make TLS messages match size of underlying transport.
@@ -135,7 +160,7 @@ There are plenty of other libraries that provide these features should you
 need them.
 
 # Example code
-There are two example programs which use 
+There are two example programs which use
 [mio](https://github.com/carllerche/mio) to do asynchronous IO.
 
 ## Client example program
@@ -181,7 +206,7 @@ Options:
 Some sample runs:
 
 ```
-$ ./tlsclient --http mozilla-modern.badssl.com
+$ cargo run --example tlsclient -- --http mozilla-modern.badssl.com
 HTTP/1.1 200 OK
 Server: nginx/1.6.2 (Ubuntu)
 Date: Wed, 01 Jun 2016 18:44:00 GMT
@@ -193,7 +218,7 @@ Content-Length: 644
 or
 
 ```
-$ ./target/debug/examples/tlsclient --http expired.badssl.com
+$ cargo run --example tlsclient -- --http expired.badssl.com
 TLS error: WebPKIError(CertExpired)
 Connection closed
 ```
@@ -253,13 +278,13 @@ Here's a sample run; we start a TLS echo server, then connect to it with
 openssl and tlsclient:
 
 ```
-$ ./tlsserver --certs test-ca/rsa/end.fullchain --key test-ca/rsa/end.rsa -p 8443 echo &
+$ cargo run --example tlsserver -- --certs test-ca/rsa/end.fullchain --key test-ca/rsa/end.rsa -p 8443 echo &
 $ echo hello world | openssl s_client -ign_eof -quiet -connect localhost:8443
 depth=2 CN = ponytown RSA CA
 verify error:num=19:self signed certificate in certificate chain
 hello world
 ^C
-$ echo hello world | ./tlsclient --cafile test-ca/rsa/ca.cert -p 8443 localhost
+$ echo hello world | cargo run --example tlsclient -- --cafile test-ca/rsa/ca.cert -p 8443 localhost
 hello world
 ^C
 ```

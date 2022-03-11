@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use mio;
-use mio::tcp::{TcpListener, TcpStream, Shutdown};
+use mio::net::{TcpListener, TcpStream};
 
 #[macro_use]
 extern crate log;
@@ -23,8 +23,6 @@ use rustls;
 
 use rustls::{RootCertStore, Session, NoClientAuth, AllowAnyAuthenticatedClient,
              AllowAnyAnonymousOrAuthenticatedClient};
-
-mod util;
 
 // Token for our listening socket.
 const LISTENER: mio::Token = mio::Token(0);
@@ -64,36 +62,39 @@ impl TlsServer {
         }
     }
 
-    fn accept(&mut self, poll: &mut mio::Poll) -> bool {
-        match self.server.accept() {
-            Ok((socket, addr)) => {
-                debug!("Accepting new connection from {:?}", addr);
+    fn accept(&mut self, registry: &mio::Registry) -> Result<(), io::Error> {
+        loop {
+            match self.server.accept() {
+                Ok((socket, addr)) => {
+                    debug!("Accepting new connection from {:?}", addr);
 
-                let tls_session = rustls::ServerSession::new(&self.tls_config);
-                let mode = self.mode.clone();
+                    let tls_session = rustls::ServerSession::new(&self.tls_config);
+                    let mode = self.mode.clone();
 
-                let token = mio::Token(self.next_id);
-                self.next_id += 1;
+                    let token = mio::Token(self.next_id);
+                    self.next_id += 1;
 
-                self.connections.insert(token, Connection::new(socket, token, mode, tls_session));
-                self.connections[&token].register(poll);
-                true
-            }
-            Err(e) => {
-                println!("encountered error while accepting connection; err={:?}", e);
-                false
+                    let mut connection = Connection::new(socket, token, mode, tls_session);
+                    connection.register(registry);
+                    self.connections.insert(token, connection);
+                }
+                Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => return Ok(()),
+                Err(err) => {
+                    println!("encountered error while accepting connection; err={:?}", err);
+                    return Err(err);
+                }
             }
         }
     }
 
-    fn conn_event(&mut self, poll: &mut mio::Poll, event: &mio::Event) {
+    fn conn_event(&mut self, registry: &mio::Registry, event: &mio::event::Event) {
         let token = event.token();
 
         if self.connections.contains_key(&token) {
             self.connections
                 .get_mut(&token)
                 .unwrap()
-                .ready(poll, event);
+                .ready(registry, event);
 
             if self.connections[&token].is_closed() {
                 self.connections.remove(&token);
@@ -123,7 +124,7 @@ fn open_back(mode: &ServerMode) -> Option<TcpStream> {
     match *mode {
         ServerMode::Forward(ref port) => {
             let addr = net::SocketAddrV4::new(net::Ipv4Addr::new(127, 0, 0, 1), *port);
-            let conn = TcpStream::connect(&net::SocketAddr::V4(addr)).unwrap();
+            let conn = TcpStream::connect(net::SocketAddr::V4(addr)).unwrap();
             Some(conn)
         }
         _ => None,
@@ -165,26 +166,27 @@ impl Connection {
     }
 
     /// We're a connection, and we have something to do.
-    fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::Event) {
+    fn ready(&mut self, registry: &mio::Registry, ev: &mio::event::Event) {
         // If we're readable: read some TLS.  Then
         // see if that yielded new plaintext.  Then
         // see if the backend is readable too.
-        if ev.readiness().is_readable() {
+        if ev.is_readable() {
             self.do_tls_read();
             self.try_plain_read();
             self.try_back_read();
         }
 
-        if ev.readiness().is_writable() {
+        if ev.is_writable() {
             self.do_tls_write_and_handle_error();
         }
 
         if self.closing {
-            let _ = self.socket.shutdown(Shutdown::Both);
+            let _ = self.socket.shutdown(net::Shutdown::Both);
             self.close_back();
             self.closed = true;
+            self.deregister(registry);
         } else {
-            self.reregister(poll);
+            self.reregister(registry);
         }
     }
 
@@ -192,7 +194,7 @@ impl Connection {
     fn close_back(&mut self) {
         if self.back.is_some() {
             let back = self.back.as_mut().unwrap();
-            back.shutdown(Shutdown::Both).unwrap();
+            back.shutdown(net::Shutdown::Both).unwrap();
         }
         self.back = None;
     }
@@ -306,15 +308,8 @@ impl Connection {
         }
     }
 
-    #[cfg(target_os = "windows")]
     fn tls_write(&mut self) -> io::Result<usize> {
         self.tls_session.write_tls(&mut self.socket)
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    fn tls_write(&mut self) -> io::Result<usize> {
-        use crate::util::WriteVAdapter;
-        self.tls_session.writev_tls(&mut WriteVAdapter::new(&mut self.socket))
     }
 
     fn do_tls_write_and_handle_error(&mut self) {
@@ -326,50 +321,51 @@ impl Connection {
         }
     }
 
-    fn register(&self, poll: &mut mio::Poll) {
-        poll.register(&self.socket,
-                      self.token,
-                      self.event_set(),
-                      mio::PollOpt::level() | mio::PollOpt::oneshot())
+    fn register(&mut self, registry: &mio::Registry) {
+        let event_set = self.event_set();
+        registry.register(&mut self.socket,
+                          self.token,
+                          event_set)
             .unwrap();
 
         if self.back.is_some() {
-            poll.register(self.back.as_ref().unwrap(),
-                          self.token,
-                          mio::Ready::readable(),
-                          mio::PollOpt::level() | mio::PollOpt::oneshot())
+            registry.register(self.back.as_mut().unwrap(),
+                              self.token,
+                              mio::Interest::READABLE)
                 .unwrap();
         }
     }
 
-    fn reregister(&self, poll: &mut mio::Poll) {
-        poll.reregister(&self.socket,
-                        self.token,
-                        self.event_set(),
-                        mio::PollOpt::level() | mio::PollOpt::oneshot())
+    fn reregister(&mut self, registry: &mio::Registry) {
+        let event_set = self.event_set();
+        registry.reregister(&mut self.socket,
+                            self.token,
+                            event_set)
+            .unwrap();
+    }
+
+    fn deregister(&mut self, registry: &mio::Registry) {
+        registry.deregister(&mut self.socket)
             .unwrap();
 
         if self.back.is_some() {
-            poll.reregister(self.back.as_ref().unwrap(),
-                            self.token,
-                            mio::Ready::readable(),
-                            mio::PollOpt::level() | mio::PollOpt::oneshot())
+            registry.deregister(self.back.as_mut().unwrap())
                 .unwrap();
         }
     }
 
     /// What IO events we're currently waiting for,
     /// based on wants_read/wants_write.
-    fn event_set(&self) -> mio::Ready {
+    fn event_set(&self) -> mio::Interest {
         let rd = self.tls_session.wants_read();
         let wr = self.tls_session.wants_write();
 
         if rd && wr {
-            mio::Ready::readable() | mio::Ready::writable()
+            mio::Interest::READABLE | mio::Interest::WRITABLE
         } else if wr {
-            mio::Ready::writable()
+            mio::Interest::WRITABLE
         } else {
-            mio::Ready::readable()
+            mio::Interest::READABLE
         }
     }
 
@@ -606,13 +602,12 @@ fn main() {
 
     let config = make_config(&args);
 
-    let listener = TcpListener::bind(&addr).expect("cannot listen on port");
+    let mut listener = TcpListener::bind(addr).expect("cannot listen on port");
     let mut poll = mio::Poll::new()
         .unwrap();
-    poll.register(&listener,
+    poll.registry().register(&mut listener,
                   LISTENER,
-                  mio::Ready::readable(),
-                  mio::PollOpt::level())
+                  mio::Interest::READABLE)
         .unwrap();
 
     let mode = if args.cmd_echo {
@@ -633,11 +628,10 @@ fn main() {
         for event in events.iter() {
             match event.token() {
                 LISTENER => {
-                    if !tlsserv.accept(&mut poll) {
-                        break;
-                    }
+                    tlsserv.accept(poll.registry())
+                        .expect("error accepting socket");
                 }
-                _ => tlsserv.conn_event(&mut poll, &event)
+                _ => tlsserv.conn_event(poll.registry(), &event)
             }
         }
     }
