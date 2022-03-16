@@ -1,6 +1,5 @@
-use std::prelude::v1::*;
-use crate::msgs::enums::{AlertLevel, AlertDescription};
 use crate::msgs::codec::{Codec, Reader};
+use crate::msgs::enums::{AlertDescription, AlertLevel};
 
 #[derive(Debug)]
 pub struct AlertMessagePayload {
@@ -14,19 +13,10 @@ impl Codec for AlertMessagePayload {
         self.description.encode(bytes);
     }
 
-    fn read(r: &mut Reader) -> Option<AlertMessagePayload> {
+    fn read(r: &mut Reader) -> Option<Self> {
         let level = AlertLevel::read(r)?;
         let description = AlertDescription::read(r)?;
 
-        Some(AlertMessagePayload {
-            level,
-            description,
-        })
-    }
-}
-
-impl AlertMessagePayload {
-    pub fn length(&self) -> usize {
-        1 + 1
+        Some(Self { level, description })
     }
 }

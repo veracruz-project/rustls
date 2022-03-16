@@ -5,3 +5,5 @@ members = [
   # tests and example code that depend on mio
   "rustls-mio",
 ]
+exclude = ["admin/rustfmt"]
+resolver = "2"

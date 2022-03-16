@@ -1,25 +1,34 @@
 #![no_main]
-#[macro_use] extern crate libfuzzer_sys;
+#[macro_use]
+extern crate libfuzzer_sys;
 extern crate rustls;
 
+use rustls::internal::msgs::codec::Reader;
 use rustls::internal::msgs::fragmenter;
 use rustls::internal::msgs::message;
-use rustls::internal::msgs::codec::{Codec, Reader};
 use std::collections::VecDeque;
+use std::convert::TryFrom;
 
 fuzz_target!(|data: &[u8]| {
     let mut rdr = Reader::init(data);
-    let mut msg = match message::Message::read(&mut rdr) {
-        Some(msg) => msg,
-        None => return
+    let msg = match message::OpaqueMessage::read(&mut rdr) {
+        Ok(msg) => msg,
+        Err(_) => return,
     };
-    msg.decode_payload();
 
-    let frg = fragmenter::MessageFragmenter::new(5);
+    let msg = match message::Message::try_from(msg.into_plain_message()) {
+        Ok(msg) => msg,
+        Err(_) => return,
+    };
+
+    let frg = fragmenter::MessageFragmenter::new(Some(32)).unwrap();
     let mut out = VecDeque::new();
-    frg.fragment(msg, &mut out);
+    frg.fragment(
+        message::PlainMessage::from(msg),
+        &mut out,
+    );
 
-    for mut msg in out {
-        msg.decode_payload();
+    for msg in out {
+        message::Message::try_from(msg).ok();
     }
 });
