@@ -322,21 +322,6 @@ impl ServerCertVerifier for WebPkiVerifier {
             trace!("Unvalidated OCSP response: {:?}", ocsp_response.to_vec());
         }
 
-        let presented_cert = &presented_certs[0];
-
-        if pinned_cert_hashes.len() > 0 {
-            let presented_cert_hash = ring::digest::digest(&ring::digest::SHA256, presented_cert.as_ref());
-            let mut found = false;
-            for this_pinned_cert_hash in pinned_cert_hashes.iter() {
-                if *this_pinned_cert_hash == presented_cert_hash.as_ref() {
-                    found = true;
-                }
-            };
-            if !found {
-                return Err(TLSError::WebPKIError(webpki::Error::CertNotValidForName));
-            }
-        }
-
         cert.verify_is_valid_for_dns_name(dns_name.0.as_ref())
             .map_err(pki_error)
             .map(|_| ServerCertVerified::assertion())
@@ -380,50 +365,6 @@ impl WebPkiVerifier {
     }
 }
 
-pub struct SelfSignedVerifier {
-    pub time: fn() -> Result<webpki::Time, TLSError>,
-}
-
-impl ServerCertVerifier for SelfSignedVerifier {
-    fn verify_server_cert(&self,
-                          _roots: &RootCertStore,
-                          presented_certs: &[Certificate],
-                          pinned_cert_hashes: &[Vec<u8>],
-                          dns_name: webpki::DNSNameRef,
-                          _ocsp_response: &[u8]) -> Result<ServerCertVerified, TLSError> {
-        let cert = prepare_self_signed(presented_certs)?;
-
-        let presented_cert = &presented_certs[0];
-
-        if pinned_cert_hashes.len() > 0 {
-            let presented_cert_sliced = presented_cert.as_ref();
-            let presented_cert_hash = ring::digest::digest(&ring::digest::SHA256, presented_cert_sliced);
-            let mut found = false;
-            for this_pinned_cert_hash in pinned_cert_hashes.iter() {
-                if *this_pinned_cert_hash == presented_cert_hash.as_ref() {
-                    found = true;
-                }
-            };
-            if !found {
-                return Err(TLSError::WebPKIError(webpki::Error::CertNotValidForName));
-            }
-        }
-
-        // Verify the certificate is valid for the host. Since the certificate is self-signed,
-        // this is provides no addition security, but it's helpful to prevent mistakes
-        cert.verify_is_valid_for_dns_name(dns_name)
-            .map_err(TLSError::WebPKIError)
-            .map(|_| ServerCertVerified::assertion())
-    }
-}
-
-impl SelfSignedVerifier {
-    pub fn new() -> SelfSignedVerifier {
-        SelfSignedVerifier {
-            time: try_now,
-        }
-    }
-}
 type CertChainAndRoots<'a, 'b> = (webpki::EndEntityCert<'a>,
                                   Vec<&'a [u8]>,
                                   Vec<webpki::TrustAnchor<'b>>);
@@ -503,12 +444,6 @@ impl CertificateTransparencyPolicy {
     }
 }
 
-type CertChainAndRoots<'a, 'b> = (
-    webpki::EndEntityCert<'a>,
-    Vec<&'a [u8]>,
-    Vec<webpki::TrustAnchor<'b>>,
-);
-
 fn prepare<'a, 'b>(
     end_entity: &'a Certificate,
     intermediates: &'a [Certificate],
@@ -529,24 +464,6 @@ fn prepare<'a, 'b>(
         .collect();
 
     Ok((cert, intermediates, trustroots))
-}
-
-fn prepare_self_signed<'a, 'b>(presented_certs: &'a [Certificate])
-                               -> Result<webpki::EndEntityCert<'a>, TLSError> {
-    if presented_certs.is_empty() {
-        return Err(TLSError::NoCertificatesPresented);
-    }
-
-    // EE cert must appear first.
-    let cert = webpki::EndEntityCert::from(&presented_certs[0].0)
-        .map_err(TLSError::WebPKIError)?;
-    Ok(cert)
-}
-
-fn try_now() -> Result<webpki::Time, TLSError> {
-    webpki::Time::try_from(std::time::SystemTime::now())
-        .map_err( |_ | TLSError::FailedToGetCurrentTime)
-}
 }
 
 /// A `ClientCertVerifier` that will ensure that every client provides a trusted
@@ -580,7 +497,7 @@ impl ClientCertVerifier for AllowAnyAuthenticatedClient {
         now: SystemTime,
     ) -> Result<ClientCertVerified, Error> {
         let (cert, chain, trustroots) = prepare(end_entity, intermediates, &self.roots)?;
-        let now = try_now()?;
+        let now = webpki::Time::try_from(now).map_err(|_| Error::FailedToGetCurrentTime)?;
         cert.verify_is_valid_tls_client_cert(
             SUPPORTED_SIG_ALGS,
             &webpki::TlsClientTrustAnchors(&trustroots),
@@ -640,7 +557,7 @@ impl ClientCertVerifier for AllowAnyAnonymousOrAuthenticatedClient {
 fn pki_error(error: webpki::Error) -> Error {
     use webpki::Error::*;
     match error {
-        BadDer | BadDerTime => Error::InvalidCertificateEncoding,
+        BadDER | BadDERTime => Error::InvalidCertificateEncoding,
         InvalidSignatureForPublicKey => Error::InvalidCertificateSignature,
         UnsupportedSignatureAlgorithm | UnsupportedSignatureAlgorithmForPublicKey => {
             Error::InvalidCertificateSignatureType

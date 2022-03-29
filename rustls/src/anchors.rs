@@ -1,9 +1,6 @@
 use std::prelude::v1::*;
 use webpki;
 
-pub use crate::msgs::handshake::{DistinguishedName, DistinguishedNames};
-use crate::pemfile;
-use crate::x509;
 use crate::key;
 #[cfg(feature = "logging")]
 use crate::log::{debug, trace};
