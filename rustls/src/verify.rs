@@ -555,11 +555,10 @@ impl ClientCertVerifier for AllowAnyAnonymousOrAuthenticatedClient {
 }
 
 fn pki_error(error: webpki::Error) -> Error {
-    use webpki::Error::*;
     match error {
-        BadDER | BadDERTime => Error::InvalidCertificateEncoding,
-        InvalidSignatureForPublicKey => Error::InvalidCertificateSignature,
-        UnsupportedSignatureAlgorithm | UnsupportedSignatureAlgorithmForPublicKey => {
+        webpki::Error::BadDER | webpki::Error::BadDERTime => Error::InvalidCertificateEncoding,
+        webpki::Error::InvalidSignatureForPublicKey => Error::InvalidCertificateSignature,
+        Webpki::Error::UnsupportedSignatureAlgorithm | webpki::Error::UnsupportedSignatureAlgorithmForPublicKey => {
             Error::InvalidCertificateSignatureType
         }
         e => Error::InvalidCertificateData(format!("invalid peer certificate: {}", e)),
