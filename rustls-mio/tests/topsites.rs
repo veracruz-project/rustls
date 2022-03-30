@@ -2,9 +2,6 @@
 // common hosts.
 //
 // Rules: only hosts that can really handle the traffic.
-// Because we don't go to the same host twice, polite()
-// is not needed.
-//
 
 #[allow(dead_code)]
 mod common;
@@ -78,5 +75,4 @@ mod online {
     fn apple() {
         check("www.apple.com")
     }
-
 }

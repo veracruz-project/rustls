@@ -23,8 +23,8 @@ Some ideas and guidelines for contributions:
   for feedback or to hand-over.
 - Prefer not to reference github issue or PR numbers in commits.
 - Try to keep code formatting commits separate from functional commits.
-- See [`.travis.yml`](.travis.yml) for how to run the various test
-  suites, and how to make coverage measurements.
+- See [`.github/workflows/build.yml`](.github/workflows/build.yml) for
+  how to run the various test suites, and how to make coverage measurements.
 - I run `cargo outdated` prior to major releases; but PRs to update specific
   dependencies are welcome.
 
@@ -46,7 +46,7 @@ If you're *looking* for security bugs, this crate is set up for
 - Features involving additions to the public API should have (at least)
   API-level tests (see [`tests/api.rs`](tests/api.rs)).
 - Protocol additions should have some coverage -- consider enabling
-  corresponding tests in the bogo suite, or writing some adhoc tests.
+  corresponding tests in the bogo suite, or writing some ad hoc tests.
 
 PRs which cause test failures or a significant coverage decrease
 are unlikely to be accepted.

@@ -1,14 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+set -ex
 
-# a known-good commit
-COMMIT=8b60cde1ad8e25d99f9f83fdab9b3542a66217eb
-
-rm -f runner.tar.gz
-wget https://boringssl.googlesource.com/boringssl/+archive/$COMMIT/ssl/test/runner.tar.gz
 mkdir -p bogo
-cd bogo/
-tar -xzf ../runner.tar.gz
-patch -p1 < ../patches/testerrormap.diff
-go test -c
+pushd bogo
+
+git init
+git config core.sparsecheckout 1
+cat << EOF > .git/info/sparse-checkout
+go.mod
+go.sum
+ssl/test/runner
+util/testresult
+EOF
+
+# fix on a tested point of rustls-testing branch
+COMMIT=3fea50a7cb55bb72e4a69d34015f1a6971e7934c
+git fetch --depth=1 https://github.com/rustls/boringssl.git $COMMIT
+git checkout $COMMIT
+(cd ssl/test/runner && go test -c)
+
+popd

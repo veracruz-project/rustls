@@ -1,79 +1,50 @@
-![Logo](https://raw.githubusercontent.com/ctz/rustls/master/admin/rustls-logo-web.png)
+<p align="center">
+  <img width="460" height="300" src="https://raw.githubusercontent.com/rustls/rustls/main/admin/rustls-logo-web.png">
+</p>
 
-Rustls is a modern TLS library written in Rust.  It's pronounced 'rustles'.
-It uses [*ring*](https://github.com/briansmith/ring) for cryptography
-and [libwebpki](https://github.com/briansmith/webpki) for certificate
+<p align="center">
+Rustls is a modern TLS library written in Rust.  It uses <a href = "https://github.com/briansmith/ring"><em>ring</em></a> for cryptography and <a href = "https://github.com/briansmith/webpki">libwebpki</a> for certificate
 verification.
+</p>
 
 # Status
 Rustls is ready for use.  There are no major breaking interface changes
-expected.  [Here's what I'm working on now](https://github.com/ctz/rustls/projects/1).
+envisioned after the set included in the 0.20 release.
 
 If you'd like to help out, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-[![Build Status](https://travis-ci.org/ctz/rustls.svg?branch=master)](https://travis-ci.org/ctz/rustls)
-[![Build Status](https://dev.azure.com/ctz99/ctz/_apis/build/status/ctz.rustls?branchName=master)](https://dev.azure.com/ctz99/ctz/_build/latest?definitionId=3&branchName=master)
-[![Coverage Status (coveralls)](https://coveralls.io/repos/github/ctz/rustls/badge.svg?branch=master)](https://coveralls.io/github/ctz/rustls?branch=master)
-[![Coverage Status (codecov.io)](https://codecov.io/gh/ctz/rustls/branch/master/graph/badge.svg)](https://codecov.io/gh/ctz/rustls/)
+[![Build Status](https://github.com/rustls/rustls/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/rustls/rustls/actions/workflows/build.yml?query=branch%3Amain)
+[![Coverage Status (codecov.io)](https://codecov.io/gh/rustls/rustls/branch/main/graph/badge.svg)](https://codecov.io/gh/rustls/rustls/)
 [![Documentation](https://docs.rs/rustls/badge.svg)](https://docs.rs/rustls/)
 
 ## Release history:
 
-* 0.16.0 (2019-08-10):
-  - Optimisation of read path for polled non-blocking IO.
-  - Correct an omission in TLS1.3 middlebox compatibility mode, causing
-    handshake failures with servers behind buggy middleboxes.
-  - Move to *ring* 0.16.
-  - Assorted refactoring to reduce memory usage during and after
-    handshake.
-  - Update other dependencies.
-* 0.15.2 (2019-04-02):
-  - Moved example code around for benefit of Fuchsia.
-  - Example code fixes for Windows -- Windows is now a tested platform.
-  - QUIC-specific bug fixes.
-  - Update dependencies.
-* 0.15.1 (2019-01-29):
-  - Fix incorrect offering of SHA1.
-* 0.15.0 (2019-01-20):
-  - Update dependencies.
-  - *Breaking API change*: ALPN protocols are now encoded as a `Vec<u8>`, not
-    a `String`.  This alters the type of:
-    - `ClientConfig::alpn_protocols`
-    - `ClientConfig::set_protocols`
-    - `ServerConfig::alpn_protocols`
-    - `ServerConfig::set_protocols`
-    - `Session::get_alpn_protocol`
-  - Emit a warning when receiving an invalid SNI extension, such as one
-    including an IP address.
-  - Extended QUIC support for later QUIC drafts.
-  - Correct bug where we'd send more than one fatal alert for
-    handshake failure cases.
-  - Discontinue support for SHA1 signatures.
-  - Move to Rust 2018 edition.
-* 0.14.0 (2018-09-30):
-  - Introduce client-side support for 0-RTT data in TLS1.3.
-  - Fix a bug in rustls::Stream for non-blocking transports.
-  - Move TLS1.3 support from draft 23 to final RFC8446 version.
-  - Don't offer (eg) TLS1.3 if no TLS1.3 suites are configured.
-  - Support stateful resumption in TLS1.3.  Stateless resumption
-    was previously supported, but is not the default configuration.
-  - *Breaking API change*: `generate()` removed from `StoresServerSessions` trait.
-  - *Breaking API change*: `take()` added to `StoresServerSessions` trait.
-* 0.13.1 (2018-08-17):
-  - Fix a bug in rustls::Stream for non-blocking transports
-    (backport).
-* 0.13.0 (2018-07-15):
-  - Move TLS1.3 support from draft 22 to 23.
-  - Add support for `SSLKEYLOGFILE`; not enabled by default.
-  - Add support for basic usage in QUIC.
-  - `ServerConfig::set_single_cert` and company now report errors.
-  - Add support for vectored IO: `writev_tls` can now be used to
-    optimise system call usage.
-  - Support ECDSA signing for server and client authentication.
-  - Add type like `rustls::Stream` which owns its underlying TCP stream
-    and rustls session.
+* Next release:
+  - Planned: removal of unused signature verification schemes at link-time.
+* 0.20.4 (2022-02-19)
+  - Correct regression in QUIC 0-RTT support.
+* 0.20.3 (2022-02-13)
+  - Support loading ECDSA keys in SEC1 format.
+  - Support receipt of 0-RTT "early data" in TLS1.3 servers.  It is not enabled
+    by default; opt in by setting `ServerConfig::max_early_data_size` to a non-zero
+    value.
+  - Support sending of data with the first server flight.  This is also not
+    enabled by default either: opt in by setting `ServerConfig::send_half_rtt_data`.
+  - Support `read_buf` interface when compiled with nightly. This means
+    data can be safely read out of a rustls connection into a buffer without
+    the buffer requiring initialisation first.  Set the `read_buf` feature to
+    use this.
+  - Improve efficiency when writing vectors of TLS types.
+  - Reduce copying and improve efficiency in TLS1.2 handshake.
+* 0.20.2 (2021-11-21)
+  - Fix `CipherSuite::as_str()` value (as introduced in 0.20.1).
+* 0.20.1 (2021-11-14)
+  - Allow cipher suite enum items to be stringified.
+  - Improve documentation of configuration builder types.
+  - Ensure unused cipher suites can be removed at link-time.
+  - Ensure single-use error types implement `std::error::Error`, and are public.
 
-See [OLDCHANGES.md](OLDCHANGES.md) for further change history.
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for further change history.
 
 # Documentation
 Lives here: https://docs.rs/rustls/
@@ -86,23 +57,24 @@ obsolete cryptography.
 ## Current features
 
 * TLS1.2 and TLS1.3.
-* ECDSA or RSA server authentication by clients.
-* ECDSA or RSA server authentication by servers.
+* ECDSA, Ed25519 or RSA server authentication by clients.
+* ECDSA, Ed25519 or RSA server authentication by servers.
 * Forward secrecy using ECDHE; with curve25519, nistp256 or nistp384 curves.
 * AES128-GCM and AES256-GCM bulk encryption, with safe nonces.
-* Chacha20Poly1305 bulk encryption.
+* ChaCha20-Poly1305 bulk encryption ([RFC7905](https://tools.ietf.org/html/rfc7905)).
 * ALPN support.
 * SNI support.
-* Tunable MTU to make TLS messages match size of underlying transport.
+* Tunable fragment size to make TLS messages match size of underlying transport.
 * Optional use of vectored IO to minimise system calls.
 * TLS1.2 session resumption.
-* TLS1.2 resumption via tickets (RFC5077).
+* TLS1.2 resumption via tickets ([RFC5077](https://tools.ietf.org/html/rfc5077)).
 * TLS1.3 resumption via tickets or session storage.
 * TLS1.3 0-RTT data for clients.
+* TLS1.3 0-RTT data for servers.
 * Client authentication by clients.
 * Client authentication by servers.
-* Extended master secret support (RFC7627).
-* Exporters (RFC5705).
+* Extended master secret support ([RFC7627](https://tools.ietf.org/html/rfc7627)).
+* Exporters ([RFC5705](https://tools.ietf.org/html/rfc5705)).
 * OCSP stapling by servers.
 * SCT stapling by servers.
 * SCT verification by clients.
@@ -115,8 +87,8 @@ obsolete cryptography.
 
 ## Non-features
 
-The following things are broken, obsolete, badly designed, underspecified,
-dangerous and/or insane. Rustls does not support:
+For reasons [explained in the manual](https://docs.rs/rustls/latest/rustls/manual/_02_tls_vulnerabilities/index.html),
+rustls does not and will not support:
 
 * SSL1, SSL2, SSL3, TLS1 or TLS1.1.
 * RC4.
@@ -129,13 +101,19 @@ dangerous and/or insane. Rustls does not support:
 * Compression.
 * Discrete-log Diffie-Hellman.
 * Automatic protocol version downgrade.
-* AES-GCM with unsafe nonces.
 
 There are plenty of other libraries that provide these features should you
 need them.
 
+### Platform support
+
+Rustls uses [`ring`](https://crates.io/crates/ring) for implementing the
+cryptography in TLS. As a result, rustls only runs on platforms
+[supported by `ring`](https://github.com/briansmith/ring#online-automated-testing).
+At the time of writing this means x86, x86-64, armv7, and aarch64.
+
 # Example code
-There are two example programs which use 
+There are two example programs which use
 [mio](https://github.com/carllerche/mio) to do asynchronous IO.
 
 ## Client example program
@@ -173,7 +151,7 @@ Options:
     --no-sni            Disable server name indication support.
     --insecure          Disable certificate verification.
     --verbose           Emit log output.
-    --mtu MTU           Limit outgoing messages to MTU bytes.
+    --max-frag-size M   Limit outgoing messages to M bytes.
     --version, -v       Show tool version.
     --help, -h          Show this screen.
 ```
@@ -181,7 +159,7 @@ Options:
 Some sample runs:
 
 ```
-$ ./tlsclient --http mozilla-modern.badssl.com
+$ cargo run --example tlsclient -- --http mozilla-modern.badssl.com
 HTTP/1.1 200 OK
 Server: nginx/1.6.2 (Ubuntu)
 Date: Wed, 01 Jun 2016 18:44:00 GMT
@@ -193,8 +171,8 @@ Content-Length: 644
 or
 
 ```
-$ ./target/debug/examples/tlsclient --http expired.badssl.com
-TLS error: WebPKIError(CertExpired)
+$ cargo run --example tlsclient -- --http expired.badssl.com
+TLS error: WebPkiError(CertExpired, ValidateServerCert)
 Connection closed
 ```
 
@@ -253,13 +231,13 @@ Here's a sample run; we start a TLS echo server, then connect to it with
 openssl and tlsclient:
 
 ```
-$ ./tlsserver --certs test-ca/rsa/end.fullchain --key test-ca/rsa/end.rsa -p 8443 echo &
+$ cargo run --example tlsserver -- --certs test-ca/rsa/end.fullchain --key test-ca/rsa/end.rsa -p 8443 echo &
 $ echo hello world | openssl s_client -ign_eof -quiet -connect localhost:8443
 depth=2 CN = ponytown RSA CA
 verify error:num=19:self signed certificate in certificate chain
 hello world
 ^C
-$ echo hello world | ./tlsclient --cafile test-ca/rsa/ca.cert -p 8443 localhost
+$ echo hello world | cargo run --example tlsclient -- --cafile test-ca/rsa/ca.cert -p 8443 localhost
 hello world
 ^C
 ```
@@ -276,3 +254,8 @@ These are included as LICENSE-APACHE, LICENSE-MIT and LICENSE-ISC
 respectively.  You may use this software under the terms of any
 of these licenses, at your option.
 
+# Code of conduct
+
+This project adopts the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct).
+Please email rustls-mod@googlegroups.com to report any instance of misconduct, or if you
+have any comments or questions on the Code of Conduct.
