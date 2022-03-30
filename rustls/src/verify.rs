@@ -558,7 +558,7 @@ fn pki_error(error: webpki::Error) -> Error {
     match error {
         webpki::Error::BadDER | webpki::Error::BadDERTime => Error::InvalidCertificateEncoding,
         webpki::Error::InvalidSignatureForPublicKey => Error::InvalidCertificateSignature,
-        Webpki::Error::UnsupportedSignatureAlgorithm | webpki::Error::UnsupportedSignatureAlgorithmForPublicKey => {
+        webpki::Error::UnsupportedSignatureAlgorithm | webpki::Error::UnsupportedSignatureAlgorithmForPublicKey => {
             Error::InvalidCertificateSignatureType
         }
         e => Error::InvalidCertificateData(format!("invalid peer certificate: {}", e)),
