@@ -192,6 +192,7 @@
         unused_import_braces,
         unused_extern_crates,
         unused_qualifications)]
+#![allow(bare_trait_objects, deprecated)]
 
 // Relax these clippy lints:
 // - ptr_arg: this triggers on references to type aliases that are Vec
