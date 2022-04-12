@@ -60,6 +60,13 @@ macro_rules! enum_builder {
                 }
             }
 
+            pub fn lookup_value(key: &str) -> Result<$enum_name, &str> {
+                match key {
+                    $( stringify!($enum_var) => Ok( $enum_name::$enum_var)),*
+                    ,_ => Err("Unknown enum value"),
+                }
+            }
+
             pub fn as_str(&self) -> Option<&'static str> {
                 match self {
                     $( $enum_name::$enum_var => Some(stringify!($enum_var))),*
